@@ -1,24 +1,35 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-
 #[ink::contract]
 mod crowd_funding {
+    use ink::storage::Mapping;
+    // use ink::prelude::{string::String, vec::Vec};
+    use ink::prelude::vec::Vec;
+    use ink::prelude::string::String;
+    #[derive(scale::Decode, scale::Encode)]
+    #[cfg_attr(
+        feature = "std",
+        derive(scale_info::TypeInfo, ink::storage::traits::StorageLayout)
+    )]
+ 
 
-    #[derive(scale::Encode, scale::Decode, Debug)]
+
+
     pub struct IndividualFundMe {
         go_fund_id: u64,
         name: String,
         reason_for_fund: String,
         amount_needed: Balance,
         amount_gotten: Balance,
-        status: bool
+        status: bool,
+        donators: Vec<AccountId>
     }
 
     #[ink(storage)]
     pub struct CrowdFunding {
-        go_funds: ink_storage::collections::HashMap<AccountId, IndividualFundMe>,
-        all_go_funds: Vec<IndividualFundMe>,
-        successfull_go_funds: Vec<IndividualFundMe>,
+        go_funds: Mapping<AccountId, IndividualFundMe>,
+        // all_go_funds: Vec<IndividualFundMe>,
+        // successfull_go_funds: Vec<IndividualFundMe>,
         go_fund_id: u64
     }
 
@@ -26,7 +37,12 @@ mod crowd_funding {
        
         #[ink(constructor)]
         pub fn new() -> Self {
-            
+            Self {
+                go_funds: Mapping::new(),
+                // all_go_funds: Vec::new(),
+                // successfull_go_funds: Vec::new(),
+                go_fund_id: 1
+            }
         }
 
        
@@ -37,15 +53,33 @@ mod crowd_funding {
 
       
         #[ink(message)]
-        pub fn flip(&mut self) {
-          
+        pub fn create_crowdfund(&mut self, _name: String, _reason_for_fund: String, _amount_needed: Balance)  {
+            
+            let new_gofund =  IndividualFundMe {
+                go_fund_id: self.go_fund_id,
+                name: _name.clone(),
+                reason_for_fund: _reason_for_fund.clone(),
+                amount_needed: _amount_needed,
+                amount_gotten: 0,
+                status: false,
+                donators: Vec::new()
+            };
+
+            self.go_funds.insert(self.env().caller(), &new_gofund);
+            // self.all_go_funds.push(new_gofund);
         }
 
        
         #[ink(message)]
-        pub fn get(&self)  {
-         
+        pub fn fund_go_fund (&mut self, addr: AccountId) {
+            let _go_fund = self.go_funds.get(addr).unwrap().go_fund_id;
+            
         }
+
+        // #[ink(message)]
+        // pub fn withdraw_from_go_fund(&self)  -> Result<(), Error>{
+         
+        // }_
     }
 
    
