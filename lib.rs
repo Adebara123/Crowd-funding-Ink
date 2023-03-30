@@ -66,7 +66,7 @@ mod crowd_funding {
             };
 
             self.go_funds.insert(self.env().caller(), &new_gofund);
-            // self.all_go_funds.push(new_gofund);
+            self.all_go_funds.push(new_gofund);
         }
 
        
