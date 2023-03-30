@@ -3,7 +3,13 @@
 #[ink::contract]
 mod crowd_funding {
     use ink::storage::Mapping;
-    // use ink::prelude::{string::String, vec::Vec};
+    // use openbrush::contracts::psp22::*;
+
+    use openbrush::contracts::{
+            traits::psp22::PSP22Ref,
+        }; 
+    
+    use ink::prelude::{string::String, vec::Vec};
     use ink::prelude::vec::Vec;
     use ink::prelude::string::String;
     #[derive(scale::Decode, scale::Encode)]
@@ -11,6 +17,13 @@ mod crowd_funding {
         feature = "std",
         derive(scale_info::TypeInfo, ink::storage::traits::StorageLayout)
     )]
+
+
+    #[derive(Debug, PartialEq, Eq, scale::Encode, scale::Decode)]
+    pub enum Error {
+        AddressZeroCheck,
+        FundNotCompleted
+    }
  
 
 
@@ -28,21 +41,23 @@ mod crowd_funding {
     #[ink(storage)]
     pub struct CrowdFunding {
         go_funds: Mapping<AccountId, IndividualFundMe>,
-        // all_go_funds: Vec<IndividualFundMe>,
-        // successfull_go_funds: Vec<IndividualFundMe>,
+        psp22_token: ink::ContractRef<PSP22>,
         go_fund_id: u64
     }
 
     impl CrowdFunding {
        
         #[ink(constructor)]
-        pub fn new() -> Self {
+        pub fn new(psp22_token: ink::ContractRef<PSP22>,) -> Self {
             Self {
                 go_funds: Mapping::new(),
-                // all_go_funds: Vec::new(),
-                // successfull_go_funds: Vec::new(),
+                psp22_token,
                 go_fund_id: 1
             }
+        }
+
+        fn zero_address(&self) -> AccountId {
+            [0u8; 32].into()
         }
 
        
@@ -66,45 +81,37 @@ mod crowd_funding {
             };
 
             self.go_funds.insert(self.env().caller(), &new_gofund);
-            self.all_go_funds.push(new_gofund);
+
         }
 
        
         #[ink(message)]
-        pub fn fund_go_fund (&mut self, addr: AccountId) {
-            let _go_fund = self.go_funds.get(addr).unwrap().go_fund_id;
+        pub fn fund_go_fund (&mut self, addr: AccountId, _amount: Balance) {
+            self.psp22_token.transfer_from(self.env().caller(), self.env().account_id(),_amount);
+            self.go_funds.get(addr).unwrap().amount_gotten += _amount;
             
         }
 
-        // #[ink(message)]
-        // pub fn withdraw_from_go_fund(&self)  -> Result<(), Error>{
-         
-        // }_
+        #[ink(message)]
+        pub fn withdraw_from_go_fund(&self, addr: AccountId)  -> Result<(), Error>{
+         if addr == self.zero_address() {
+            return Err(Error::AddressZeroCheck)
+         }
+        let fund_gotten = self.go_funds.get(self.env().caller()).unwrap().amount_gotten;
+        let fund_needed = self.go_funds.get(self.env().caller()).unwrap().amount_needed;
+        
+        if &fund_gottten != &fund_need {
+            return Err(Error::FundNotCompleted)
+        }
+
+        self.go_funds.get(self.env().caller()).unwrap().amount_gotten = 0;
+        self.psp22_token.transfer_from( self.env().account_id(),self.env().caller(),fund_gotten);
+       
+        Ok(())
+        }
+
+
     }
-
-   
-    // #[cfg(test)]
-    // mod tests {
-    //     /// Imports all the definitions from the outer scope so we can use them here.
-    //     use super::*;
-
-    //     /// We test if the default constructor does its job.
-    //     #[ink::test]
-    //     fn default_works() {
-    //         let crowd_funding = CrowdFunding::default();
-    //         assert_eq!(crowd_funding.get(), false);
-    //     }
-
-    //     /// We test a simple use case of our contract.
-    //     #[ink::test]
-    //     fn it_works() {
-    //         let mut crowd_funding = CrowdFunding::new(false);
-    //         assert_eq!(crowd_funding.get(), false);
-    //         crowd_funding.flip();
-    //         assert_eq!(crowd_funding.get(), true);
-    //     }
-    // }
-
 
     /// This is how you'd write end-to-end (E2E) or integration tests for ink! contracts.
     ///
